@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CookSi - Cooking Cost Calculator</title>
+<style>
+:root{
+  --bg:#0f172a;
+  --card:#111827;
+  --accent:#22c55e;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
+}
+*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto;}
+body{
+  margin:0;
+  min-height:100vh;
+  background:linear-gradient(135deg,#020617,#020617 40%,#020617);
+  display:flex;align-items:flex-start;justify-content:center;color:var(--text);
+  padding:10px;
+  overflow-x:hidden;
+}
+.app{
+  width:100%;
+  max-width:400px;
+  margin:0 auto;
+  padding-bottom:20px;
+  background:rgba(17,24,39,.85);
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  box-shadow:0 15px 30px rgba(0,0,0,.35);
+  display:flex;
+  flex-direction:column;
+}
+.header{
+  padding:16px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.header h1{font-size:1.1rem;margin:0;}
+.header p{margin:6px 0 0;color:var(--muted);font-size:.8rem;}
+.form{padding:16px;display:flex;flex-direction:column;gap:12px;}
+label{font-size:.75rem;color:var(--muted);}
+input,select{
+  width:100%;padding:10px 12px;border-radius:12px;
+  background:#020617;border:1px solid rgba(255,255,255,.08);
+  color:var(--text);font-size:.9rem;
+  min-width:0;
+}
+input:focus,select:focus{outline:none;border-color:var(--accent);}
+.row{display:flex;flex-direction:row;gap:8px;flex-wrap:wrap;}
+.row>div{flex:1;min-width:120px;}
+button{
+  padding:12px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:#022c22;font-weight:600;font-size:.95rem;cursor:pointer;
+  width:100%;
+}
+button:active{transform:scale(.97);}
+.results{
+  padding:16px;border-top:1px solid rgba(255,255,255,.08);
+  background:rgba(2,6,23,.6);
+  border-radius:0 0 20px 20px;
+  display:flex;flex-direction:column;gap:10px;
+  overflow-x:auto;
+  position:relative;
+}
+.result-box{
+  background:#020617;border:1px dashed rgba(255,255,255,.12);
+  border-radius:12px;padding:12px;
+}
+.result-box h3{margin:0 0 4px;font-size:.8rem;color:var(--muted);}
+.result-box p{margin:0;font-size:1rem;font-weight:600;}
+.footer-note{font-size:.7rem;color:var(--muted);text-align:center;padding:8px;}
+#chartContainer{
+  display:flex;
+  justify-content:center;
+}
+canvas{
+  width:100% !important;
+  height:auto;
+  display:block;
+  max-width:350px;
+}
+#tooltip {
+  position: absolute;
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  display: none;
+  z-index: 10;
+}
+#cheapestOption {
+  font-weight:600;color:#00ff00;text-align:center;margin-bottom:8px;
+}
+@media(max-width:420px){
+  .header h1{font-size:1rem;}
+  .header p{font-size:.75rem;}
+  button{font-size:.9rem;padding:10px;}
+  label{font-size:.7rem;}
+  .row{flex-direction:column;}
+  .row>div{min-width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>CookSi</h1>
+    <p>Estimate electricity cost for induction stove usage</p>
+  </div>
+  <div class="form">
+    <div>
+      <label>Induction Power (Watts)</label>
+      <input type="number" id="power" placeholder="e.g. 1800" value="1800">
+    </div>
+    <div class="row">
+      <div>
+        <label>Cooking Time (Hours)</label>
+        <input type="number" step="0.1" id="hours" value="1">
+      </div>
+      <div>
+        <label>Electricity Rate (₹/kWh)</label>
+        <select id="rate">
+          <option value="5.5">Delhi – 5.5</option>
+          <option value="6">West Bengal – 6</option>
+          <option value="6.5">Maharashtra – 6.5</option>
+          <option value="5">Gujarat – 5</option>
+          <option value="7">Tamil Nadu – 7</option>
+          <option value="8">Karnataka – 8</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Usage Type</label>
+        <select id="usage">
+          <option value="1">Single Use</option>
+          <option value="30">Monthly</option>
+          <option value="365">Yearly</option>
+        </select>
+      </div>
+      <div>
+        <label>Cooking Mode</label>
+        <select id="mode">
+          <option value="1">Boiling</option>
+          <option value="1.2">Frying</option>
+          <option value="1.4">Pressure Cooking</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label>LPG Cost per Cylinder (₹)</label>
+      <input type="number" id="lpgPrice" value="1100">
+    </div>
+    <div class="row">
+      <div>
+        <label>LPG Consumption (kg/hour)</label>
+        <input type="number" step="0.01" id="lpgRate" value="0.25">
+      </div>
+      <div>
+        <label>Cylinder Size (kg)</label>
+        <input type="number" id="lpgSize" value="14.2">
+      </div>
+    </div>
+    <div>
+      <label>Electric Coil Power (Watts)</label>
+      <input type="number" id="electricPower" value="2000">
+    </div>
+    <button id="calculateBtn">Calculate & Compare</button>
+    <button type="button" id="resetBtn" style="background:linear-gradient(135deg,#ef4444,#b91c1c);margin-top:8px;">Reset</button>
+  </div>
+  <div class="results" id="results" style="display:none;">
+    <div class="result-box"><h3>Induction Energy</h3><p id="energy"></p></div>
+    <div class="result-box"><h3>Induction Cost</h3><p id="cost"></p></div>
+    <div class="result-box"><h3>LPG Cost</h3><p id="lpgCost"></p></div>
+    <div class="result-box"><h3>Electric Cost</h3><p id="electricCost"></p></div>
+    <div class="result-box"><h3>Savings</h3><p id="savings"></p></div>
+    <div id="cheapestOption"></div>
+    <div id="chartContainer">
+      <canvas id="chart" height="200"></canvas>
+    </div>
+    <div id="tooltip"></div>
+  </div>
+  <div class="footer-note">© Manik Roy 2025. All Rights Reserved.</div>
+</div>
+
+<script>
+(function(){
+  const tooltip = document.getElementById('tooltip');
+
+  function calculate() {
+    const power = parseFloat(document.getElementById('power').value) || 0;
+    const hours = parseFloat(document.getElementById('hours').value) || 0;
+    const rate = parseFloat(document.getElementById('rate').value) || 0;
+    const days = parseInt(document.getElementById('usage').value) || 1;
+    const mode = parseFloat(document.getElementById('mode').value) || 1;
+    const lpgPrice = parseFloat(document.getElementById('lpgPrice').value) || 0;
+    const lpgRate = parseFloat(document.getElementById('lpgRate').value) || 0;
+    const lpgSize = parseFloat(document.getElementById('lpgSize').value) || 1;
+    const electricPower = parseFloat(document.getElementById('electricPower').value) || 0;
+
+    const energy = (power / 1000) * hours * days * mode;
+    const inductionCost = energy * rate;
+    const lpgCost = ((lpgRate * hours * days) / lpgSize) * lpgPrice;
+    const electricCost = (electricPower / 1000) * hours * days * rate;
+
+    document.getElementById('energy').textContent = energy.toFixed(2) + ' kWh';
+    document.getElementById('cost').textContent = '₹' + inductionCost.toFixed(2);
+    document.getElementById('lpgCost').textContent = '₹' + lpgCost.toFixed(2);
+    document.getElementById('electricCost').textContent = '₹' + electricCost.toFixed(2);
+
+    const usageSelect = document.getElementById('usage');
+    const usageTextMap = { '1':'Single Use', '30':'Monthly', '365':'Yearly' };
+    const usageText = usageTextMap[usageSelect.value] || '';
+
+    document.getElementById('savings').textContent = 
+      '₹' + Math.abs(Math.min(inductionCost, electricCost, lpgCost) - Math.max(inductionCost, electricCost, lpgCost)).toFixed(2)
+      + ' (' + usageText + ')';
+
+    // Determine cheapest option
+    let cheapestName = '';
+    const minValue = Math.min(inductionCost, lpgCost, electricCost);
+    if(minValue === inductionCost) cheapestName = 'Induction';
+    else if(minValue === lpgCost) cheapestName = 'LPG';
+    else cheapestName = 'Electric';
+
+    document.getElementById('cheapestOption').textContent = 'Cheapest Option (' + usageText + '): ' + cheapestName;
+
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.style.display = 'block';
+
+    // recalc canvas width after results are visible
+    const c = document.getElementById('chart');
+    const container = document.getElementById('chartContainer');
+    c.width = container.offsetWidth;
+    c.height = 200;
+
+    drawChart(inductionCost, lpgCost, electricCost);
+
+    const yOffset = -10;
+    const y = resultsDiv.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }
+
+  function drawChart(i, l, e) {
+    const c = document.getElementById('chart');
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+
+    const max = Math.max(i,l,e) || 1;
+    const barCount = 3;
+    const spacing = 20;
+    const barWidth = Math.min(60, (c.width - spacing*(barCount-1))/barCount);
+    const totalWidth = barCount*barWidth + (barCount-1)*spacing;
+    const startX = (c.width - totalWidth)/2;
+
+    const positions = [];
+    for(let idx=0; idx<barCount; idx++){
+      positions.push(startX + idx*(barWidth+spacing));
+    }
+
+    const bars = [
+      { value:i, color:'#22c55e', label:'Induction' },
+      { value:l, color:'#ef4444', label:'LPG' },
+      { value:e, color:'#3b82f6', label:'Electric' }
+    ];
+
+    const minValue = Math.min(i,l,e);
+
+    bars.forEach((bar, idx)=>{
+      const height = (bar.value/max)*150;
+      ctx.fillStyle = (bar.value===minValue)?'#00ff00':bar.color;
+      ctx.fillRect(positions[idx], 180-height, barWidth, height);
+
+      // Numeric cost label above bar
+      ctx.fillStyle = '#e5e7eb';
+      ctx.textAlign = 'center';
+      ctx.font = '12px system-ui';
+      ctx.fillText('₹'+bar.value.toFixed(2), positions[idx]+barWidth/2, 180-height-5);
+
+      // Bar name under bar
+      ctx.fillText(bar.label, positions[idx]+barWidth/2, 195);
+
+      bar.x = positions[idx];
+      bar.y = 180-height;
+      bar.width = barWidth;
+      bar.height = height;
+    });
+
+    // Tooltip detection
+    c.onmousemove = function(evt) {
+      const rect = c.getBoundingClientRect();
+      const x = evt.clientX - rect.left;
+      const y = evt.clientY - rect.top;
+      let found = false;
+      bars.forEach(bar=>{
+        if(x>=bar.x && x<=bar.x+bar.width && y>=bar.y && y<=bar.y+bar.height){
+          tooltip.style.display='block';
+          tooltip.style.left = evt.clientX+10+'px';
+          tooltip.style.top = evt.clientY-30+'px';
+          tooltip.textContent = `${bar.label}: ₹${bar.value.toFixed(2)} ${bar.value===minValue?'(Cheapest)':''}`;
+          found = true;
+        }
+      });
+      if(!found) tooltip.style.display='none';
+    }
+    c.onmouseleave = ()=>tooltip.style.display='none';
+  }
+
+  function resetForm() {
+    document.getElementById('power').value=1800;
+    document.getElementById('hours').value=1;
+    document.getElementById('rate').value=5.5;
+    document.getElementById('usage').value=1;
+    document.getElementById('mode').value=1;
+    document.getElementById('lpgPrice').value=1100;
+    document.getElementById('lpgRate').value=0.25;
+    document.getElementById('lpgSize').value=14.2;
+    document.getElementById('electricPower').value=2000;
+
+    const resultsDiv=document.getElementById('results');
+    resultsDiv.style.display='none';
+    document.getElementById('cheapestOption').textContent='';
+    document.getElementById('savings').textContent='';
+    const c=document.getElementById('chart');
+    const ctx=c.getContext('2d');
+    ctx.clearRect(0,0,c.width,c.height);
+  }
+
+  document.getElementById('calculateBtn').addEventListener('click', calculate);
+  document.getElementById('resetBtn').addEventListener('click', resetForm);
+
+  window.addEventListener('resize',()=>{
+    const resultsDiv=document.getElementById('results');
+    if(resultsDiv.style.display==='block'){
+      const i=parseFloat(document.getElementById('cost').textContent.replace('₹',''))||0;
+      const l=parseFloat(document.getElementById('lpgCost').textContent.replace('₹',''))||0;
+      const e=parseFloat(document.getElementById('electricCost').textContent.replace('₹',''))||0;
+      const c=document.getElementById('chart');
+      c.width = document.getElementById('chartContainer').offsetWidth;
+      drawChart(i,l,e);
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
